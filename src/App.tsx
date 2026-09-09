@@ -98,8 +98,42 @@ function Bar({label,value}:{label:string,value:number}){return <div className="b
 function LeadRow({lead}:{lead:Lead}){const nav=useNavigate();return <div className="lead-row" onClick={()=>nav('/leads/'+lead.id)}><div className="company-avatar">{lead.business_name[0]}</div><div className="grow"><b>{lead.business_name}</b><small>{lead.city} · {lead.category}</small></div><div className="site-state">{lead.has_website?'Site encontrado':'Sem site'}</div><Score n={lead.lead_score}/></div>}
 
 function SearchPage(){
- const [keyword,setKeyword]=useState(''),[city,setCity]=useState(''),[state,setState]=useState('SC'),[limit,setLimit]=useState('25'),[running,setRunning]=useState(false),[done,setDone]=useState(false)
- const run=()=>{setRunning(true);setDone(false);setTimeout(()=>{setRunning(false);setDone(true)},1800)}
+const [keyword, setKeyword] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('SC');
+  const [limit, setLimit] = useState('25');
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const [totalFound, setTotalFound] = useState(0);
+
+  const run = async () => {
+    if (!keyword.trim() || !city.trim()) {
+      alert('Por favor, informe o nicho e a cidade antes de pesquisar.');
+      return;
+    }
+
+    setRunning(true);
+    setDone(false);
+
+    try {
+      const response = await fetch(
+        `/api/search?query=${encodeURIComponent(keyword)}&city=${encodeURIComponent(`${city} - ${state}`)}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao consultar a API');
+      }
+
+      const results = data.results || [];
+      setTotalFound(results.length);
+      setDone(true);
+    } catch (err: any) {
+      alert(`Falha na busca: ${err.message}`);
+    } finally {
+      setRunning(false);
+    }
+  };//
  return <><Header title="Nova pesquisa" subtitle="Encontre empresas por nicho e localização."/>
  <div className="search-layout"><section className="panel search-card"><div className="section-title"><div className="icon-box"><Search size={20}/></div><div><h3>Configurar pesquisa</h3><p>Use dados públicos para encontrar novas oportunidades.</p></div></div>
   <label>Nicho ou palavra-chave<input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="Ex.: clínicas odontológicas"/></label>
@@ -107,7 +141,7 @@ function SearchPage(){
   <div className="form-grid"><label>Raio<select><option>5 km</option><option>10 km</option><option>25 km</option><option>50 km</option></select></label><label>Quantidade<select value={limit} onChange={e=>setLimit(e.target.value)}><option>10</option><option>25</option><option>50</option><option>100</option></select></label></div>
   <button className="primary wide" onClick={run} disabled={running}><Search size={17}/>{running?'Pesquisando...':'Pesquisar empresas'}</button>
   {running&&<div className="progress-box"><b>Pesquisa em andamento</b><p>Encontrando empresas e preparando análise...</p><div className="progress"><div/></div></div>}
-  {done&&<div className="success-box"><ShieldCheck size={20}/><div><b>Pesquisa concluída</b><p>Modo demonstração: 25 empresas encontradas. Conecte uma API para dados reais.</p></div><a href="/leads">Ver leads →</a></div>}
+  {done&&<div className="success-box"><ShieldCheck size={20}/><div><b>Pesquisa concluída</b><p><p>{totalFound} empresas encontradas no Google Maps.</p></p></div><a href="/leads">Ver leads →</a></div>}
  </section>
  <section className="panel tips"><h3>Como funciona</h3><Step n="01" title="Encontre empresas" text="Pesquise por nicho, cidade e raio."/><Step n="02" title="Verifique presença digital" text="O sistema identifica e audita websites."/><Step n="03" title="Priorize oportunidades" text="Lead Score destaca quem merece seu contato primeiro."/><Step n="04" title="Entre em contato" text="Abra WhatsApp, Instagram ou Google Maps."/>
  </section></div></>
